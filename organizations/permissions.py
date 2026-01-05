@@ -1,8 +1,17 @@
-from typing import Optional
+from typing import Optional, Protocol
 from django.contrib.auth import get_user_model
+
 from organizations.models import Organization, OrganizationMembership
+from organizations.capabilities import OrgCapability
 
 User = get_user_model()
+
+class HasOrgRole(Protocol):
+    role: str
+
+# --------------------
+# DB boundary
+# --------------------
 
 def get_org_membership(
     user: User,
@@ -23,39 +32,56 @@ def get_org_membership(
         .first()
     )
 
-def user_is_org_admin(user: User, organization: Organization) -> bool:
+# --------------------
+# Pure permission logic
+# --------------------
+
+ORG_ROLE_CAPABILITIES = {
+    OrganizationMembership.Role.ADMIN: {
+        OrgCapability.READ,
+        OrgCapability.WRITE,
+        OrgCapability.DELETE,
+    },
+    OrganizationMembership.Role.ORGANIZER: {
+        OrgCapability.READ,
+        OrgCapability.WRITE,
+    },
+    OrganizationMembership.Role.OBSERVER: {
+        OrgCapability.READ,
+    },
+}
+
+def has_org_capability(
+    membership: Optional[HasOrgRole],
+    capability: OrgCapability,
+) -> bool:
     """
-    True only if the user is an ADMIN of the organization.
+    Returns True if the given membership grants the specified capability.
+    Fails closed for None or unknown roles.
     """
-    membership = get_org_membership(user, organization)
     if membership is None:
         return False
 
-    return membership.role == OrganizationMembership.Role.ADMIN
+    return capability in ORG_ROLE_CAPABILITIES.get(
+        membership.role,
+        set(),
+    )
 
-def user_is_org_organizer(user: User, organization: Organization) -> bool:
-    """
-    True if the user has WRITE access at the organization level.
+# --------------------
+# Human-facing helpers
+# --------------------
 
-    ADMIN → True
-    ORGANIZER → True
-    OBSERVER → False
-    """
-    membership = get_org_membership(user, organization)
-    if membership is None:
-        return False
+def can_read_in_organization(
+    membership: Optional[OrganizationMembership],
+) -> bool:
+    return has_org_capability(membership, OrgCapability.READ)
 
-    return membership.role in {
-        OrganizationMembership.Role.ADMIN,
-        OrganizationMembership.Role.ORGANIZER,
-    }
+def can_write_in_organization(
+    membership: Optional[OrganizationMembership],
+) -> bool:
+    return has_org_capability(membership, OrgCapability.WRITE)
 
-def user_is_org_observer(user: User, organization: Organization) -> bool:
-    """
-    True if the user is an OBSERVER in the organization.
-    """
-    membership = get_org_membership(user, organization)
-    if membership is None:
-        return False
-
-    return membership.role == OrganizationMembership.Role.OBSERVER
+def can_delete_in_organization(
+    membership: Optional[OrganizationMembership],
+) -> bool:
+    return has_org_capability(membership, OrgCapability.DELETE)

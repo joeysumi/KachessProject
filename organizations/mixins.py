@@ -3,10 +3,11 @@ from django.shortcuts import get_object_or_404
 
 from organizations.models import Organization
 from organizations.permissions import (
-    user_is_org_admin,
-    user_is_org_organizer,
-    user_is_org_observer,
+    get_org_membership,
+    has_org_capability,
 )
+from organizations.capabilities import OrgCapability
+
 
 class OrganizationContextMixin:
     """
@@ -43,45 +44,48 @@ class OrganizationContextMixin:
         return super().dispatch(request, *args, **kwargs)
 
 
-class OrganizationAdminRequiredMixin(OrganizationContextMixin):
+class OrganizationCapabilityRequiredMixin:
     """
-    Allows access only to organization admins.
+    Base mixin for organization-scoped capability checks.
+
+    Subclasses must define:
+        required_capability: OrgCapability
     """
+
+    required_capability = None
 
     def dispatch(self, request, *args, **kwargs):
-        self.organization = self.get_organization()
+        if self.required_capability is None:
+            raise RuntimeError(
+                "OrganizationCapabilityRequiredMixin requires "
+                "`required_capability` to be set"
+            )
 
-        if not user_is_org_admin(request.user, self.organization):
+        self.organization = self.get_organization()
+        self.membership = get_org_membership(request.user, self.organization)
+
+        if not has_org_capability(self.membership, self.required_capability):
             raise PermissionDenied
 
         return super().dispatch(request, *args, **kwargs)
 
 
-class OrganizationOrganizerRequiredMixin(OrganizationContextMixin):
-    """
-    Allows access to admins and organizers.
-    """
-
-    def dispatch(self, request, *args, **kwargs):
-        self.organization = self.get_organization()
-
-        if not user_is_org_organizer(request.user, self.organization):
-            raise PermissionDenied
-
-        return super().dispatch(request, *args, **kwargs)
+class OrganizationReadRequiredMixin(
+    OrganizationContextMixin,
+    OrganizationCapabilityRequiredMixin,
+):
+    required_capability = OrgCapability.READ
 
 
-class OrganizationObserverRequiredMixin(OrganizationContextMixin):
-    """
-    Allows access to any organization member (including observers).
-    """
+class OrganizationWriteRequiredMixin(
+    OrganizationContextMixin,
+    OrganizationCapabilityRequiredMixin,
+):
+    required_capability = OrgCapability.WRITE
 
-    def dispatch(self, request, *args, **kwargs):
-        self.organization = self.get_organization()
 
-        if not user_is_org_observer(request.user, self.organization) and not user_is_org_organizer(
-            request.user, self.organization
-        ):
-            raise PermissionDenied
-
-        return super().dispatch(request, *args, **kwargs)
+class OrganizationDeleteRequiredMixin(
+    OrganizationContextMixin,
+    OrganizationCapabilityRequiredMixin,
+):
+    required_capability = OrgCapability.DELETE

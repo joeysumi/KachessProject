@@ -1,109 +1,38 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import SimpleTestCase
 
-from organizations.models import (
-    Organization,
-    OrganizationMembership,
-)
+from organizations.dataclasses import OrgMembershipView
+from organizations.models import OrganizationMembership
 from organizations.permissions import (
-    get_org_membership,
-    user_is_org_admin,
-    user_is_org_organizer,
-    user_is_org_observer,
+    can_read_in_organization,
+    can_write_in_organization,
+    can_delete_in_organization,
 )
 
-User = get_user_model()
 
+class TestOrganizationPermissions(SimpleTestCase):
 
-class TestOrganizationPermission(TestCase):
+    def test_admin_capabilities__can_read_write_delete(self):
+        membership = OrgMembershipView(role=OrganizationMembership.Role.ADMIN)
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.org = Organization.objects.create(name="Test Org")
+        self.assertTrue(can_read_in_organization(membership))
+        self.assertTrue(can_write_in_organization(membership))
+        self.assertTrue(can_delete_in_organization(membership))
 
-        cls.admin = User.objects.create(
-            username="admin",
-            email="admin@example.com",
-        )
+    def test_organizer_capabilities__can_read_write(self):
+        membership = OrgMembershipView(role=OrganizationMembership.Role.ORGANIZER)
 
-        cls.organizer = User.objects.create(
-            username="organizer",
-            email="organizer@example.com",
-        )
+        self.assertTrue(can_read_in_organization(membership))
+        self.assertTrue(can_write_in_organization(membership))
+        self.assertFalse(can_delete_in_organization(membership))
 
-        cls.observer = User.objects.create(
-            username="observer",
-            email="observer@example.com",
-        )
+    def test_observer_capabilities__can_read(self):
+        membership = OrgMembershipView(role=OrganizationMembership.Role.OBSERVER)
 
-        cls.outsider = User.objects.create(
-            username="outsider",
-            email="outsider@example.com",
-        )
+        self.assertTrue(can_read_in_organization(membership))
+        self.assertFalse(can_write_in_organization(membership))
+        self.assertFalse(can_delete_in_organization(membership))
 
-        OrganizationMembership.objects.create(
-            user=cls.admin,
-            organization=cls.org,
-            role=OrganizationMembership.Role.ADMIN,
-        )
-
-        OrganizationMembership.objects.create(
-            user=cls.organizer,
-            organization=cls.org,
-            role=OrganizationMembership.Role.ORGANIZER,
-        )
-
-        OrganizationMembership.objects.create(
-            user=cls.observer,
-            organization=cls.org,
-            role=OrganizationMembership.Role.OBSERVER,
-        )
-
-    def test_get_org_membership_returns_membership(self):
-        membership = get_org_membership(self.admin, self.org)
-        self.assertIsNotNone(membership)
-        self.assertEqual(membership.role, OrganizationMembership.Role.ADMIN)
-
-    def test_get_org_membership_returns_none_for_non_member(self):
-        membership = get_org_membership(self.outsider, self.org)
-        self.assertIsNone(membership)
-
-    def test_get_org_membership_fails_closed_for_anonymous(self):
-        membership = get_org_membership(None, self.org)
-        self.assertIsNone(membership)
-
-    def test_user_is_org_admin(self):
-        self.assertTrue(user_is_org_admin(self.admin, self.org))
-
-    def test_organizer_is_not_admin(self):
-        self.assertFalse(user_is_org_admin(self.organizer, self.org))
-
-    def test_observer_is_not_admin(self):
-        self.assertFalse(user_is_org_admin(self.observer, self.org))
-
-    def test_non_member_is_not_admin(self):
-        self.assertFalse(user_is_org_admin(self.outsider, self.org))
-
-    def test_admin_is_organizer(self):
-        self.assertTrue(user_is_org_organizer(self.admin, self.org))
-
-    def test_organizer_is_organizer(self):
-        self.assertTrue(user_is_org_organizer(self.organizer, self.org))
-
-    def test_observer_is_not_organizer(self):
-        self.assertFalse(user_is_org_organizer(self.observer, self.org))
-
-    def test_non_member_is_not_organizer(self):
-        self.assertFalse(user_is_org_organizer(self.outsider, self.org))
-
-    def test_observer_is_observer(self):
-        self.assertTrue(user_is_org_observer(self.observer, self.org))
-
-    def test_admin_is_not_observer(self):
-        self.assertFalse(user_is_org_observer(self.admin, self.org))
-
-    def test_organizer_is_not_observer(self):
-        self.assertFalse(user_is_org_observer(self.organizer, self.org))
-
-    def test_non_member_is_not_observer(self):
-        self.assertFalse(user_is_org_observer(self.outsider, self.org))
+    def test_non_member__has_no_capabilities(self):
+        self.assertFalse(can_read_in_organization(None))
+        self.assertFalse(can_write_in_organization(None))
+        self.assertFalse(can_delete_in_organization(None))

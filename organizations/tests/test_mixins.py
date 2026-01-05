@@ -1,118 +1,87 @@
-from django.contrib.auth import get_user_model
-from django.core.exceptions import PermissionDenied
-from django.test import RequestFactory, TestCase
-from django.views.generic import TemplateView
+from django.test import TestCase, override_settings
+from django.urls import reverse
 
-from organizations.mixins import (
-    OrganizationObserverRequiredMixin,
-    OrganizationOrganizerRequiredMixin,
-    OrganizationAdminRequiredMixin,
+from organizations.models import OrganizationMembership
+from organizations.tests.factories import (
+    UserFactory,
+    OrganizationFactory,
+    OrganizationMembershipFactory,
 )
-from organizations.models import Organization, OrganizationMembership
-
-User = get_user_model()
 
 
-class OrganizationMixinTestBase(TestCase):
+@override_settings(ROOT_URLCONF="organizations.tests.urls")
+class OrganizationMixinTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.factory = RequestFactory()
+        cls.org = OrganizationFactory()
 
-        cls.org = Organization.objects.create(name="Test Org")
+        cls.admin = UserFactory()
+        cls.organizer = UserFactory()
+        cls.observer = UserFactory()
+        cls.outsider = UserFactory()
 
-        cls.admin = User.objects.create(
-            username="admin",
-            email="admin@test.com",
-        )
-
-        cls.organizer = User.objects.create(
-            username="organizer",
-            email="org@test.com",
-        )
-
-        cls.observer = User.objects.create(
-            username="observer",
-            email="obs@test.com",
-        )
-
-        OrganizationMembership.objects.create(
+        OrganizationMembershipFactory(
             user=cls.admin,
             organization=cls.org,
             role=OrganizationMembership.Role.ADMIN,
         )
 
-        OrganizationMembership.objects.create(
+        OrganizationMembershipFactory(
             user=cls.organizer,
             organization=cls.org,
             role=OrganizationMembership.Role.ORGANIZER,
         )
 
-        OrganizationMembership.objects.create(
+        OrganizationMembershipFactory(
             user=cls.observer,
             organization=cls.org,
             role=OrganizationMembership.Role.OBSERVER,
         )
 
-class ObserverView(OrganizationObserverRequiredMixin, TemplateView):
-    template_name = "dummy.html"
+    def test_read_allows_any_member(self):
+        for user in (self.admin, self.organizer, self.observer):
+            self.client.force_login(user)
+            response = self.client.get(
+                reverse("org-read", args=[self.org.pk])
+            )
+            self.assertEqual(response.status_code, 200)
 
-
-class OrganizerView(OrganizationOrganizerRequiredMixin, TemplateView):
-    template_name = "dummy.html"
-
-
-class AdminView(OrganizationAdminRequiredMixin, TemplateView):
-    template_name = "dummy.html"
-
-def dispatch(view_cls, user, org):
-    request = RequestFactory().get("/")
-    request.user = user
-
-    return view_cls.as_view()(request, organization_id=org.id)
-
-
-class TestOrganizationObserverRequiredMixin(OrganizationMixinTestBase):
-
-    def test_member_is_allowed(self):
-        response = dispatch(ObserverView, self.observer, self.org)
-        self.assertEqual(response.status_code, 200)
-
-    def test_non_member_is_denied(self):
-        outsider = User.objects.create(
-            username="outsider",
-            email="out@test.com",
+    def test_read_denies_non_member(self):
+        self.client.force_login(self.outsider)
+        response = self.client.get(
+            reverse("org-read", args=[self.org.pk])
         )
+        self.assertEqual(response.status_code, 403)
 
-        with self.assertRaises(PermissionDenied):
-            dispatch(ObserverView, outsider, self.org)
+    def test_write_allows_admin_and_organizer(self):
+        for user in (self.admin, self.organizer):
+            self.client.force_login(user)
+            response = self.client.post(
+                reverse("org-write", args=[self.org.pk])
+            )
+            self.assertEqual(response.status_code, 200)
 
+    def test_write_denies_observer_and_non_member(self):
+        for user in (self.observer, self.outsider):
+            self.client.force_login(user)
+            response = self.client.post(
+                reverse("org-write", args=[self.org.pk])
+            )
+            self.assertEqual(response.status_code, 403)
 
-class TestOrganizationOrganizerRequiredMixin(OrganizationMixinTestBase):
-
-    def test_admin_is_allowed(self):
-        response = dispatch(OrganizerView, self.admin, self.org)
+    def test_delete_allows_admin_only(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(
+            reverse("org-delete", args=[self.org.pk])
+        )
         self.assertEqual(response.status_code, 200)
 
-    def test_organizer_is_allowed(self):
-        response = dispatch(OrganizerView, self.organizer, self.org)
-        self.assertEqual(response.status_code, 200)
-
-    def test_observer_is_denied(self):
-        with self.assertRaises(PermissionDenied):
-            dispatch(OrganizerView, self.observer, self.org)
-
-
-class TestOrganizationAdminRequiredMixin(OrganizationMixinTestBase):
-
-    def test_admin_is_allowed(self):
-        response = dispatch(AdminView, self.admin, self.org)
-        self.assertEqual(response.status_code, 200)
-
-    def test_organizer_is_denied(self):
-        with self.assertRaises(PermissionDenied):
-            dispatch(AdminView, self.organizer, self.org)
-
-    def test_observer_is_denied(self):
-        with self.assertRaises(PermissionDenied):
-            dispatch(AdminView, self.observer, self.org)
+    def test_delete_denies_non_admin(self):
+        for user in (self.organizer, self.observer, self.outsider):
+            self.client.force_login(user)
+            response = self.client.post(
+                reverse("org-delete", args=[self.org.pk])
+            )
+            self.assertEqual(response.status_code, 403)
+            
