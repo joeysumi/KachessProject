@@ -3,9 +3,9 @@ from django.urls import reverse
 
 from organizations.models import OrganizationMembership
 from organizations.tests.factories import (
-    UserFactory,
     OrganizationFactory,
     OrganizationMembershipFactory,
+    UserFactory
 )
 
 

@@ -1,8 +1,9 @@
-from django.db import models
-from organizations.models import Person, TimeStampedModel
-from .trip import Trip
 from django.core.exceptions import ValidationError
+from django.db import models
 
+from organizations.models import Person, TimeStampedModel
+
+from .trip import Trip
 
 
 class TripInvolvement(TimeStampedModel):

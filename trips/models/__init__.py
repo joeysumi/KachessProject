@@ -1,4 +1,4 @@
 from .trip import Trip
-from .involvement import TripInvolvement
+from .trip_involvement import TripInvolvement
 
 __all__ = ["Trip", "TripInvolvement"]
