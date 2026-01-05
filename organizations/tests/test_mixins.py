@@ -14,44 +14,43 @@ User = get_user_model()
 
 
 class OrganizationMixinTestBase(TestCase):
-    def setUp(self):
-        self.factory = RequestFactory()
 
-        self.org = Organization.objects.create(name="Test Org")
+    @classmethod
+    def setUpTestData(cls):
+        cls.factory = RequestFactory()
 
-        self.admin = User.objects.create_user(
+        cls.org = Organization.objects.create(name="Test Org")
+
+        cls.admin = User.objects.create(
             username="admin",
             email="admin@test.com",
-            password="pw",
         )
 
-        self.organizer = User.objects.create_user(
+        cls.organizer = User.objects.create(
             username="organizer",
             email="org@test.com",
-            password="pw",
         )
 
-        self.observer = User.objects.create_user(
+        cls.observer = User.objects.create(
             username="observer",
             email="obs@test.com",
-            password="pw",
         )
 
         OrganizationMembership.objects.create(
-            user=self.admin,
-            organization=self.org,
+            user=cls.admin,
+            organization=cls.org,
             role=OrganizationMembership.Role.ADMIN,
         )
 
         OrganizationMembership.objects.create(
-            user=self.organizer,
-            organization=self.org,
+            user=cls.organizer,
+            organization=cls.org,
             role=OrganizationMembership.Role.ORGANIZER,
         )
 
         OrganizationMembership.objects.create(
-            user=self.observer,
-            organization=self.org,
+            user=cls.observer,
+            organization=cls.org,
             role=OrganizationMembership.Role.OBSERVER,
         )
 
@@ -80,10 +79,9 @@ class TestOrganizationObserverRequiredMixin(OrganizationMixinTestBase):
         self.assertEqual(response.status_code, 200)
 
     def test_non_member_is_denied(self):
-        outsider = User.objects.create_user(
+        outsider = User.objects.create(
             username="outsider",
             email="out@test.com",
-            password="pw",
         )
 
         with self.assertRaises(PermissionDenied):

@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     "organizations",
     "trips",
 ]
@@ -76,12 +75,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'TEST': {
-            'NAME': ':memory:',
-        },
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "kachess_dev",
+        "USER": "Shiro",
+        "PASSWORD": "",
+        "HOST": "localhost",
+        "PORT": "5432",
     }
 }
 
@@ -121,17 +121,3 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
-import sys
-
-if 'test' in sys.argv:
-    MIGRATION_MODULES = {
-        'organizations': None,
-        'trips': None,
-    }
-
-if 'test' in sys.argv:
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
-    }

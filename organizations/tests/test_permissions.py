@@ -17,48 +17,45 @@ User = get_user_model()
 
 class TestOrganizationPermission(TestCase):
 
-    def setUp(self):
-        self.org = Organization.objects.create(name="Test Org")
+    @classmethod
+    def setUpTestData(cls):
+        cls.org = Organization.objects.create(name="Test Org")
 
-        self.admin = User.objects.create_user(
+        cls.admin = User.objects.create(
             username="admin",
             email="admin@example.com",
-            password="pass",
         )
 
-        self.organizer = User.objects.create_user(
+        cls.organizer = User.objects.create(
             username="organizer",
             email="organizer@example.com",
-            password="pass",
         )
 
-        self.observer = User.objects.create_user(
+        cls.observer = User.objects.create(
             username="observer",
             email="observer@example.com",
-            password="pass",
         )
 
-        self.outsider = User.objects.create_user(
+        cls.outsider = User.objects.create(
             username="outsider",
             email="outsider@example.com",
-            password="pass",
         )
 
         OrganizationMembership.objects.create(
-            user=self.admin,
-            organization=self.org,
+            user=cls.admin,
+            organization=cls.org,
             role=OrganizationMembership.Role.ADMIN,
         )
 
         OrganizationMembership.objects.create(
-            user=self.organizer,
-            organization=self.org,
+            user=cls.organizer,
+            organization=cls.org,
             role=OrganizationMembership.Role.ORGANIZER,
         )
 
         OrganizationMembership.objects.create(
-            user=self.observer,
-            organization=self.org,
+            user=cls.observer,
+            organization=cls.org,
             role=OrganizationMembership.Role.OBSERVER,
         )
 

@@ -5,7 +5,6 @@ from django.test import TestCase
 from organizations.models import Organization, Person
 from trips.models import Trip, TripInvolvement
 
-User = get_user_model()
 
 class TestTripInvolvement(TestCase):
 
