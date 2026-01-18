@@ -2,8 +2,6 @@
 
 A trip/event planning and facilitating tool.
 
-A trip/event planning and facilitating tool.
-
 <sub>Django 6.0 project using Python 3.13.<sub>
 
 ## History
