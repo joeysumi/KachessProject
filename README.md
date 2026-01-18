@@ -1,5 +1,7 @@
 # KachessProject
+A trip/event planning and facilitating tool.
 
+<<<<<<< HEAD
 A trip/event planning and facilitating tool.
 
 <sub>Django 6.0 project using Python 3.13.<sub>
@@ -41,6 +43,11 @@ KACHESS PROJECT
 ```
 
 <sub>Modified: 2026-01-17<sub>
+=======
+<sub>Django 6.0 project using Python 3.13.</sub>
+
+## Project Structure
+>>>>>>> 79b2a3a9ec54618be9b6648dd2e1374da2525581
 
 ## Setup
 
@@ -51,6 +58,7 @@ pip install -r requirements.txt
 python manage.py runserver
 ```
 
+<<<<<<< HEAD
 ## App Terminology (not necessarily the front-facing vocabulary)
 
 - organization - A church, family, or company. This is the base structure from where a trip is attached.
@@ -85,3 +93,10 @@ There are currently three statuses a person can have on a trip:
 - attending
 
 A trip status has nothing to do with permissions, but helps the trip organizer classify a person's involvement in the trip.
+=======
+## App Vocabulary (not necessarily front-facing)
+* organization - A church, family, or company. This is the base structure from where a trip is attached.
+Each organization can contain multiple <i>contacts</i>.
+* trip - A trip/event to be planned. You can plan trip details, collaborate with attendees, and facilitate the trip while you're on the go.
+* user - A registered account attached to >1 organization.
+>>>>>>> 79b2a3a9ec54618be9b6648dd2e1374da2525581
