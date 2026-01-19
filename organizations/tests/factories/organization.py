@@ -7,3 +7,4 @@ class OrganizationFactory(factory.django.DjangoModelFactory):
         model = Organization
 
     name = factory.Sequence(lambda n: f"Organization {n}")
+    unique_name = None
